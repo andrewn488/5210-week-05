@@ -1,0 +1,30 @@
+---
+title: "week_05_notes"
+author: "Andrew Nalundasan"
+date: "7/17/2021"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggannotate)
+library(tidyverse)
+library(ggplot2)
+library(vtable)
+library(gridExtra)
+library(lattice)
+library(janitor)
+```
+
+# Overview Video
+
++ Notes here.
+
+
+
