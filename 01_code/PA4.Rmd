@@ -1,0 +1,94 @@
+---
+title: "PA4"
+author: "Andrew Nalundasan"
+date: "7/21/2021"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Course: OMSBA 5210
+# Purpose: Participation Assignment 4
+# Date: July 21, 2021
+# Author: Andrew Nalundasan
+```
+
+```{r}
+# The tidyverse package contains ggplot2, dplyr, and several other packages
+library(tidyverse)
+
+# to get $ and , on axis in graph
+library(scales)
+
+# NHK special
+library(vtable)
+
+# to make annotations
+library(ggannotate)
+```
+
+
+```{r}
+# Load and prepare data 
+zillow <- read_csv("../02_raw_data/qp1_data.csv")
+
+# look at the data
+head(zillow)
+vtable(zillow)
+```
+
+
+# Visualizations
+
+```{r}
+cb_palette <- c("#999999", "#00A5FF")
+
+p <- zillow %>% 
+  group_by(sqft_living, waterfront) %>% 
+  summarize(med_price = median(price)) %>% 
+  filter(sqft_living < 9000) %>% 
+  mutate(waterfront = as.factor(waterfront)) %>% 
+  
+  ggplot(mapping = aes(x = sqft_living, y = med_price, color = waterfront)) + 
+  scale_color_manual(values = cb_palette) + 
+  geom_point(alpha = 0.35) + 
+  geom_smooth(method = "lm", se = FALSE) + 
+  
+  # scale_y_continuous(labels = dollar) + 
+  scale_y_continuous(label = label_number_si(accuracy = .5)) +
+  guides(color = "none", labels = "none") + 
+  theme_classic() + 
+  #theme(axis.line.x = element_blank()) + 
+  #theme(axis.line.y = element_blank()) + 
+  theme(axis.ticks.x = element_blank()) + 
+  theme(axis.ticks.y = element_blank()) +
+  
+  labs(x = "Living Space (in Square Feet)",
+       y = "Median Price",
+       title = "Waterfront property boosts median home price", 
+       subtitle = "More living space paired with waterfront views\ncompound value of home") + 
+  
+  geom_text(data = data.frame(x = 7840.10833134011, y = 4134345.8884987, label = "Waterfront"),
+            mapping = aes(x = x, y = y, label = label),
+            hjust = 0L, vjust = 0.35, colour = "#00A5FF", fontface = 2, inherit.aes = FALSE) +
+  
+  geom_text(data = data.frame(x = 8019.8032352691, y = 2169630.60683532, label = "No Waterfront"),
+            mapping = aes(x = x, y = y, label = label),
+            hjust = 0.32, vjust = 1L, colour = "#999999", fontface = 2, inherit.aes = FALSE)
+
+
+# view the viz
+p
+
+# make annotations
+# ggannotate(p)
+```
+
