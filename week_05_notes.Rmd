@@ -13,18 +13,1014 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-library(ggannotate)
+# wrangling, subsetting, plotting
 library(tidyverse)
-library(ggplot2)
-library(vtable)
-library(gridExtra)
-library(lattice)
+
+# correlation test of multiple variables
+library(Hmisc)
+
+# tidy cross tabs
 library(janitor)
+
+# calculate multinomial confidence intervals for factor variables
+library(MultinomialCI)
+
+# format HTML tables
+library(htmlTable)
+
+# NHK special
+library(vtable)
+
 ```
 
 # Overview Video
 
-+ Notes here.
++ Focus this week: 
+
+    - Statistical testing
+    - Formatting tables and vizualisations
+    
++ kable package is fantastic
+
+    - "LaTex" (pronounced "LA Tech")
+    - kableextra good for PDF or HTML, but not Word
+    - Use "officer" package when formatting for Word
+    
++ Other formatting package
+
+    - kable for basic table stuff
+    - kableextra for extending kable, but only in PDF and HTML
+    - flextable package
+    - huxtable package
+    - gt package
+    
++ Display regression outputs and summary statistics
+
+    - stargazer package is very outdated
+    - vtable
+    - modelsummary package 
+        - regression outputs
+        - works with all the table formatting package
+
++ Content based aspects
+
+    - Do not tilt the text!
+    - Present to your audience who most likely reads from left to right
+    - Statistical significance
+        - Good thing to think about
+        - Be careful with interpreting this as a "real thing" 
+        - Do not mistake statistical significance for reality
+        - It's a hint/guidance, but not actually important
+    - Effects of statistical significance
+        - Effected by a lot of things other than if the results are important or not, or real or not
+        - Effected by kind of test you do
+        - Effected by number of controls in your model
+        - Effected by amount of sampling variation
+        - Effected by how small the effect is in relation to the noise
+    - As a data analyst
+        - Understand what's going on very well
+        - By the time of data communication, you know how to inception your audience
+            - You must know what the real thing is first, in order to do inception
+    - Statistical significance yields a SUGGESTION, not a DECISION
+    - Statistical significance is one tool in the tool belt. Not the end all be all
+    
+# Statistics
+
+## Central Limit Theorem
+
++ Statistical inference
+
+    - Process of using a sample to make statements about a population
+    
++ Steps of inference: 
+
+    1. Gather a sample
+    2. Establish the null/alternative hypothesis (set a research question)
+    3. Set confidence level (1 - alpha) to balance Type I and Type II errors
+    4. Test the hypothesis based on the sample
+    5. State the results
+    
++ CLT helps us understand what we are getting **"relative to what is possible"**
+
+    - There could be thousands of different samples that we could've gotten
+    
++ CLT shows 2 things:
+
+    1. Descriptive statistics does not depend on the distribution of the variable
+        - Max, min, mean, median, variance, etc. <- this describes the population
+        - CLT can describe the above **WITHOUT** knowing the underlying population
+    2. The larger the sample, the better the descriptive statistic represents the population
+        - Confidence Interval (CI) will change depending on population, *n*
+        
+    - Repeated sampling illustrates what your one research sample *could* be
+    - Validity of making inference
+    
++ Distributions in R
+
+    1. Exponential (e)
+    2. Normal (n)
+    3. Uniform (u)
+    4. Poisson (p)
+    5. Cauchy (c)
+    6. Binomial (b)
+    7. Gamma (g)
+    8. Chi-Square (x)
+    9. T-distribution (t)
+    
+### Demonstrate the CLT
+
+```{r}
+# number of samples, each will be a column in a matrix
+r <- 500
+
+# sample size, number of obs, rows in a column
+n <- 1000
+
+# mean of uniform distribution
+pop_samples <- matrix(runif(n * r, 0, 2), n)
+all_sample_sums <- apply(pop_samples, 2, sum)    # apply is similar to taking a loop
+all_sample_means <- apply(pop_samples, 2, mean)
+all_sample_vars <- apply(pop_samples, 2, var)
+par(mfrow = c(2, 2))
+hist(pop_samples[1,], col="gray", main="Distribution of One Sample")
+hist(all_sample_sums, col="gray", main="Sampling Distribution of the Sum")
+hist(all_sample_means, col="gray", main="Sampling Distribution of the Mean")
+hist(all_sample_vars, col="gray", main="Sampling Distribution of the Variance")
+
+```
+
++ CLT - descriptive statistics get "tighter" and distribution gets "more normal" with more samples
+
+    - Your sample gets better at representing the mean for the population
+    
+### Different sample sizes
+
+```{r}
+# 30 samples
+
+# number of samples, each will be a column in a matrix
+r <- 500
+
+# sample size, number of obs, rows in a column
+n <- 30
+
+# Mean of uniform distribution
+pop_samples <- matrix(runif(n * r, 0, 2), n)
+all_sample_means <- apply(pop_samples, 2, mean)
+par(mfrow = c(1, 2))
+hist(pop_samples[1,], col="gray", main="Distribution of One Sample")
+hist(all_sample_means, col="gray", main="Sampling Distribution of the Mean")
+```
+
+
+```{r}
+# 300 samples
+
+# number of samples, each will be a column in a matrix
+r <- 500
+
+# sample size, number of obs, rows in a column
+n <- 300
+
+# Mean of uniform distribution
+pop_samples <- matrix(runif(n * r, 0, 2), n)
+all_sample_means <- apply(pop_samples, 2, mean)
+par(mfrow = c(1, 2))
+hist(pop_samples[1,], col="gray", main="Distribution of One Sample")
+hist(all_sample_means, col="gray", main="Sampling Distribution of the Mean")
+
+```
+
+**Comments**
+
++ Much more confidence that the sample mean is representative of the sample population
+
+```{r}
+# 3,000 samples
+
+# number of samples, each will be a column in a matrix
+r <- 500
+
+# sample size, number of obs, rows in a column
+n <- 3000
+
+# Mean of uniform distribution
+pop_samples <- matrix(runif(n * r, 0, 2), n)
+all_sample_means <- apply(pop_samples, 2, mean)
+par(mfrow = c(1, 2))
+hist(pop_samples[1,], col="gray", main="Distribution of One Sample")
+hist(all_sample_means, col="gray", main="Sampling Distribution of the Mean")
+```
+
+**Comments**
+
++ Quality of descriptive statistics have increased with the larger n
+
++ Law of diminishing marginal returns  
+
+    - 3000 sample is overfit. 
+        - Improvements from 300 to 3000, there's improvement, but not by much
+        - Improvements from 30 to 300 is excellent improvement
+
+
+## Distribution of sample mean
+
++ Shiny app to demo CLT
+
++ As n increases, the descriptive statistics of your distribution becomes more normal
+
++ CLT is critical for knowing the quality of the descriptive statistics of your sample 
+
++ Be aware of what the sample size of your sub-groups are
+
+
+## Statistical inference
+
++ goal: bring statistical inference into EDA
+
++ Inference is the process of using a sample to make statements about a population
+    
++ This only applies if you don't have the full population in your sample
+
++ setting level of risk in "alpha"
+
++ **practical significance**: how big is the **impact** or **difference** of the variables?
+
++ **statistical significance**: How **consistent** or **reliable** is the difference?
+
+    - Focus on the impacts that are **BIG** and are **CONSISTENT**
+        - Both **practical** and **statistically significant**
+        - Just because something misses the significance cut off, doesn't mean that it's not important to note
+        
+### Gather a sample
+
+```{r}
+# Random sample from the Poisson distribution
+# selecting that each sample have a mean of 2
+set.seed(123)
+s1 <- rpois(30, 2)
+s2 <- rpois(300, 2)
+s3 <- rpois(3000, 2)
+```
+
+
+### Establish Hypothesis
+
++ Ho: samples have the same mean
+
+    - Should always be that "things are the same", "your policy won't effect anything", "what you're trying doesn't work"
+    - Since we don't know the population mean, we implement a Confidence Interval
+    - CI has confidence level of "some chance": (1 - alpha)
+    - Null: is "no", there's no impact
+    
+### Set a confidence level to balance Type I and Type II errors
+
++ alpha is a risk level you're willing to accept
+
+    - Tails of distribution are the rejection region
+    - Rejection region is (1 -alpha)
+
++ Hypothesis testing: 
+
+    1. Reject a false null - **this is not an error**
+    2. Fail to reject a true null - **this is not an error**
+    3. Reject a true null - **Type I Error**
+    4. Fail to reject a false null - **Type II Error**
+    
++ Type I vs. Type II Errors: 
+
+    - Ho: "Innocent until proven guilty" 
+    - convicting an innocent person:
+        - reject a true null: **Type I Error**
+    - letting a guilty person go free:
+      - fail to reject a fales null: **Type II Error**
+      
++ Selecting alpha: 
+
+    1. Select alpha prior to looking at data
+        - New questions emerge, but don't lose sight of original goals
+    2. Determine "what's expensive?"
+        - lost revenue from discounts
+        - expense is lower market share and potentially lost profits from increased sales
+    3. Alpha
+        - large alpha == 0.1
+            - less likely to commit a Type II error
+        - if you find something interesting that happens to have a p-value that implies an interesting finding, do not ignore it!
+            - acknowledge that you found this in the data without looking for it
+            - it is fine to expect one thing and discover another
+            
+### Test the hypothesis based on the sample
+
++ See how the CI and p-value change for each sample
+
+```{r}
+# t-test of samples to see if sample is from a population with mean = 2
+t.test(s1, mu = 2)
+t.test(s2, mu = 2)
+t.test(s3, mu = 2)
+```
+
++ S1 comments: 
+
+    - p-value = 0.1357
+    - Fail to reject the null
+    - True mean is somewhere between 1.85-3.01
+    - Mean = 2.43
+    - Only have (1 - 0.1357) certainty
+    - True mean should be 2
+    
++ S2 comments:
+
+    - CI gets smaller and gets more centered around 2
+    - Mean = 1.95
+        - Thanks to the 300 samples
+    
++ S3 comments: 
+
+    - Mean = 1.98
+        - This is pretty close! Thanks to the 3000 samples
+
+
+
+### State the Results
+
++ if we ran the test enough times, we would find a sample that would reject the null hypothesis at n = 30
+  
+    - but not for n = 300 or n = 3000
+    
++ this is why it's dangerous to rely on p-values alone
+
++ must consider how the sample was collected
+
+
+# Visualizations
+
+## Part I
+
++ setup data, questions, null, alternative hypothesis
+
++ check findings if there is statistical robustness
+
+    - Practical and Statistical significance
+    - Must understand who your audience is
+    - Can audience ask questions or no?
+
++ Detailed EDA questions: 
+
+    1. Actual prices customers pay for each brand are the same
+    2. If there is a price difference it does not impact sales
+    3. If there is a price difference, it is the same across stores
+        - First 3 are related to Quantitative variables (Price and Price Difference)
+        - Use t-tests for quantitative variables
+    4. There is no difference in units sold based on the discount scenario
+    5. There is no difference in units sold based on the special scenario
+        - 4 and 5 based on counts of Factor variables
+        - Use chi-squared tests for categorical variables
+
+### Load and prepare data
+
+```{r}
+# load data
+oj <- read_csv("02_raw_data/OJ_Data.csv")
+
+# remove ID column
+oj <- oj[, -1]
+
+```
+
+
+```{r}
+# Create new price, discount, and special variables
+# actual price variable
+oj <- oj %>% 
+  mutate(act_pr_CH = PriceCH - DiscCH,
+         act_pr_MM = PriceMM - DiscMM,
+         pr_diff = act_pr_MM - act_pr_CH)
+
+# add column of how many sales depening on discounts for each, both, and neither
+oj <- oj %>% 
+  mutate(Disc = as.factor(
+    ifelse(DiscCH == 0 & DiscMM != 0, "Disc_MM",
+           ifelse(DiscCH != 0 & DiscMM == 0, "Disc_CH",
+                  ifelse(DiscCH == 0 & DiscMM == 0, "Disc_Neither", "Disc_Both")))
+  ))
+
+# Add column of how many sales depending on specials for each, both, and neither
+oj <- oj %>% 
+  mutate(Spec = 
+           as.factor(ifelse(SpecialCH == 0 & SpecialMM != 0, "Spec_MM",
+                            ifelse(SpecialCH != 0 & SpecialMM == 0, "Spec_CH",
+                                   ifelse(SpecialCH == 0 & SpecialMM == 0, "Spec_Neither", "Spec_Both")))))
+
+```
+
+### Examine the data
+```{r}
+summary(oj)
+```
+
+**Comments**
+
++ MM is more expensive even though they offer Discounts more often
+
+    - both are not discounted very often (568)
+
++ Average number of discounts was 0.05 for CH and 0.12 for MM
+
++ They run a similar number of Specials
+
+    - Too few obs to say anything about both on special
+    - MM uses more discounts than specials
+    - CH uses similar amount of discounts and specials
+
+**Questions**
+
++ How do Discounts vs Specials drive sales?
+
+### Q1: Compare actual price paid by consumer
+
+```{r}
+# Compare density of actual price paid
+oj %>% 
+  select(act_pr_CH, act_pr_MM) %>% 
+  gather(Brand, Price) %>% 
+  ggplot(mapping = aes(x = Price, fill = Brand, alpha = 0.2)) +
+  geom_density()
+```
+
+**Comments**
+
++ CH is generally lower priced even after discounting
+
+    - But it is CH is not always lower
+    - We will need to test the difference statistically
+ 
+
+```{r}
+# t-test of actual price
+(t <- t.test(oj$act_pr_MM, oj$act_pr_CH, conf.level = 0.95))
+```
+
+**Comments** 
+
++ Ho: actual prices customers pay for each brand are the same
+
++ we can **infer** from the sample CI the population mean price is between $0.13 - 0.16
+
+    - MM is usually 13-16 cents higher than CH
+    - p-value is really small, so this is consistent
+    
+### Q2: Does the price difference impact sales?
+
+```{r}
+# statistically test our finding
+
+# Boxplot to show distribution of price difference by brand
+oj %>% 
+  ggplot(mapping = aes(x = Purchase, y = pr_diff)) + 
+  geom_boxplot()
+```
+
+**Comments**
+
++ price is positive for most CH sales
+
++ Use t-test to verify descriptive statistics of quantitative variables
+
+```{r}
+(t <- t.test(oj$pr_diff[oj$Purchase == "CH"], oj$pr_diff[oj$Purchase == "MM"], conf.level = 0.95))
+```
+
+**Comments**
+
++ we have about a 15 cent difference, and this is still consistent
+
++ the sales prices are different when people are making the purchase
+
+### Visualization of the statistical test
+
+```{r}
+# 95% CI, get z-value for upper tail, use 0.975 since it is one sided
+z <- qnorm(0.975)
+
+# Incorporate CI into bar graph of means
+oj %>% 
+  group_by(Purchase) %>% 
+  summarise(mean_pr_diff = mean(pr_diff), sd = sd(pr_diff),
+            n = n(), ci = z * sd/sqrt(n)) %>% 
+  ggplot(aes(x = Purchase, y = mean_pr_diff)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = mean_pr_diff - ci, ymax = mean_pr_diff + ci),
+                width = 0.5, position = position_dodge(0.9))
+```
+
++ CI for price differences when each brand is sold
+
++ Mean price difference when CH is sold, is somewhere in the range of 20 cents
+
++ Mean price difference when MM is sold, is somewhere in the range of 5 cents
+
++ Error bars reflect CI's.
+
+    - Since they don't overlap, it tells us that they are statistically different
+
+## Part II
+
+### Q3: Is price difference the same across stores?
+
++ Show for stores without running many t-tests
+
++ looking for overlapping CI's rather than calculating p-values
+
++ if CIs overlap, the values are not statistically different
+
++ p-value is synonymous to alpha because it relates to the tails and rejection region of our statistical tests
+
+```{r}
+# 95% CI, get z-value for upper tail, use 0.975 since it is one sided
+z <- qnorm(0.975)
+
+# Incorporate CI into bar graph of means
+oj %>% 
+  group_by(Purchase, STORE) %>% 
+  summarise(mean_pr_diff = mean(pr_diff), sd = sd(pr_diff),
+            n = n(), ci = z * sd/sqrt(n)) %>% 
+  ggplot(aes(x = Purchase, y = mean_pr_diff, fill = as.factor(STORE))) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = mean_pr_diff - ci, ymax = mean_pr_diff + ci),
+                width = 0.5, position = position_dodge(0.9))
+
+```
+
+**Comments**
+
++ CH is lower priced at all stores
+
++ Mean prices tend to differ
+
++ MM price differences are close to 0
+
++ Error bars are wider apart for MM 
+    
+    - Means that the n is smaller
+    
++ CH Has narrower CI, so likely larger n and would have smaller p-values
+
++ Mean price difference is not statistically different from 0 for 3 STORES with MM sales
+
++ all CH sales occur when mean price of CH is lower than MM
+    
+### Q4: Do brand sales vary based on discount scenario?
+
++ when working with categorical variables, questions are based on **counts** and **proportions**
+
++ chi-squared test
+
+```{r}
+# Number of obs helps us determine if stats will be valid
+oj %>% 
+  tabyl(Purchase, Disc)
+```
+
+**Comments**
+
++ MM sales has a low count when both brands are discounted
+
++ H0: Units sold are the same by discount scenario and brand
+
+```{r}
+# Using chi-square tests for counts we can only determine if they are the same or not
+# Are sales similar by brand and discount scenario?
+# Not tidyverse so have to use base code
+
+chisq.test(table(oj$Purchase, oj$Disc))
+```
+
+**Comments**
+
++ chi-square: relatively large, so reject the null
+
++ p-value: small so reject the null
+
+```{r}
+# First make a table of counts to calculate the CI
+P_D_n <- oj %>% 
+  group_by(Purchase, Disc) %>% 
+  summarise(n = n())
+
+# Calculate CI using multinomialCI
+P_D_n_ci <- multinomialCI(t(P_D_n[, 3]), 0.05) # have to use t() to train
+                                               # alpha = 0.05 indicates 95%
+
+# Next create a table with proportions that is ggplot friendly
+P_D_tab <- oj %>% 
+  group_by(Purchase, Disc) %>% 
+  summarise(prop = round(n() / sum(nrow(oj)), 3))
+
+# Add the CI to the table of proportions
+P_D_tab$ci_1 <- round(P_D_n_ci[,1], 3)
+P_D_tab$ci_u <- round(P_D_n_ci[,2], 3)
+
+# show the table
+htmlTable(P_D_tab)
+```
+
+
+**Comments**
+
++ shows in table format
+
+```{r}
+# Graph of proportions with CIs
+P_D_tab %>% 
+  ggplot(aes(x = Disc, y = prop, fill = Purchase)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = round(prop, 2)), vjust = -4, color = "black", 
+            position = position_dodge(0.9), size = 4) +
+  geom_errorbar(aes(ymin = ci_1, ymax = ci_u), 
+                width = 0.4, position = position_dodge(0.9))
+```
+
+
+**Comments**
+
++ CH has larger proportion of sales than MM in Disc_CH and Disc_Neither scenarios
+
++ Disc_Both are pretty much the same because sample size is too small to tell the difference
+
+### Q5: How to brand sales vary with special scenario?
+
+```{r}
+# First make a table of counts to calculate the CI
+P_S_n <- oj %>% 
+  group_by(Purchase, Spec) %>% 
+  summarise(n = n())
+
+# Calculate CI using multinomialCI
+P_S_n_ci <- multinomialCI(t(P_S_n[, 3]), 0.05)
+
+# Next create a table with proportions that is ggplot friendly
+P_S_tab <- oj %>% 
+  group_by(Purchase, Spec) %>% 
+  summarise(prop = round(n()/sum(nrow(oj)), 3))
+
+# Add the CIs to the table of proportions
+P_S_tab$ci_1 <- round(P_S_n_ci[,1], 3)
+P_S_tab$ci_u <- round(P_S_n_ci[,2], 3)
+
+# show the table
+htmlTable(P_S_tab)
+```
+
+
+```{r}
+P_S_tab %>% 
+  ggplot(aes(x = Spec, y = prop, fill = Purchase)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = round(prop, 2)), vjust = -4, color = "black", 
+            position = position_dodge(0.9), size = 4) +
+  geom_errorbar(aes(ymin = ci_1, ymax = ci_u), 
+                width = 0.4, position = position_dodge(0.9))
+```
+
+**Comments**
+
++ CH does better when they're the only ones doing a special
+
++ 0 sales on MM when both brands are on Special
+
+### Significance of correlation
+
++ Ho: variables are not correlated
+
+```{r}
+# Are the correlations statistically significant?
+oj %>% 
+  mutate(Purchase = as.integer(Purchase)) %>% 
+  select_if(is.numeric) %>% 
+  chart.Correlation()
+```
+
+
++ Applying statistical testing to EDA results justifies our findings
+
+    - Ensure you are giving justifiable recommendations
+    - "Impact is large/small" 
+    - "Consistent or reliable" instead of "Statistically significant"
+    - "Not consistent or not reliable" instead of "not statistically significant"
+
+
+## Apply Regression
+
++ Visualizing multiple regressions
+
++ goals:
+    
+    1. present another way to visualize regression results
+    2. get thinking about how to visualize results of modeling techniques I'll learn in the future
+        - How to communicate those results
+        
+### Multiple linear regression
+
+```{r}
+# set up oj data set for regression
+oj_lm <- oj %>% 
+  mutate_if(is.integer, as.factor)
+
+# logit regression with general linear model (glm)
+mod <- glm(Purchase ~ pr_diff + DiscMM + DiscCH + SpecialMM + SpecialCH + STORE,
+           family = binomial(link='logit'),
+           data = oj_lm)
+
+# glm seems to have changed, this code is broken
+```
+
+**Comments** 
+
++ When MM is on special, more likely to sell more (0.44)
+
++ When CH is on special, it's less likely to sell more (-0.03)
+
+```{r}
+# plot residuals to check for patterns
+
+par(mfrow = c(1, 1))
+plot(oj$Purchase, mod$residuals)
+
+plot(oj$DiscMM, mod$residuals)
+     
+plot(oj$DiscCH, mod$residuals)
+
+plot(oj$SpecialMM, mod$residuals)
+
+plot(oj$SpecialCH, mod$residuals)
+
+plot(oj$Store, mod$residuals)
+
+```
+
++ How easy is it to understand which variables are:
+
+    1. Practically significant (have large impact)
+    2. Statistically significant (most reliable)
+    
+```{r}
+# Pull out the coefficients and CI for table and graph
+coe <- summary(mod)$coefficients    # get coefficients and related stats
+coe_CI <- as.data.frame(cbind(coe[-1, ], confint(mod)[-1, ]))    # find and bind CI, remove Intercept
+
+# rename results data frame
+names(coe_CI) <- c("estimate", "se", "t", "pval", "low_CI", "high_CI")
+
+# view the table
+htmlTable(round(coe_CI, 3))
+```
+
+
++ Order based on p-value
+
+```{r}
+# Make a neat table
+htmlTable(round(coe_CI[order(coe_CI$pval, decreasing = FALSE), ], 3))
+```
+
+
++ Clevland dot plot
+
+```{r}
+# Cleveland dot plot of results
+ggplot(coe_CI, aes(x = estimate, y = row.names(coe_CI))) +
+  geom_point(size = 3) +
+  xlim(min(coe_CI$low_CI), max(coe_CI$high_CI)) +
+  ylab("variable") +
+  xlab("Coefficient") +
+  theme_bw()
+```
+
+```{r}
+# Reorder for more clarity
+(g1 <- ggplot(coe_CI, aes(x = estimate, y = row.names(coe_CI), desc(pval)))) +
+  geom_point(size = 3) +
+  xlim(min(coe_CI$low_CI), max(coe_CI$high_CI)) +
+  ylab("Variable") +
+  xlab("Coefficient") +
+  theme_bw()
+
+# use geom_segment to illustrate CI
+(g2 <- g1 +
+    geom_segment(aex(yend = reorder(row.names(coe_CI), desc(pval))),
+                 xend = coe_CI$high_CI, color = "Blue") +
+    geom_segment(aes(yend = reorder(row.names(coe_CI), desc(coe_CI$pval))),
+                 xend = coe_CI$low_CI, color = "Blue") +
+    xlab("Coefficient with CI")
+  )
+
+# line at 0 gives context
+(g3 <- g2 +
+    geom_vline(xintercept = 0, color = "red"))
+```
+
++ CI indicate tighter or looser distributions
+
++ These results indicate that STORES is important and Price Difference is important
+
++ Determine if findings are statistically valid
+
++ Determine level of confidence in findings
+
+
+## Tables I
+
++ possible to get exact numbers in tables while we can't in graphs
+
++ base tables from R are ugly and need formatting
+
++ htmlTable is limited to HTML outputs
+
++ never show full raw data in TA
+
+    - show 5 x 5 max
+    - 10 x 10 is too much
+    - need good titles and labels
+    
++ tables act like a wrapper
+
+    - spend time formatting it
+
+```{r}
+# load libraries
+library(tidyverse)
+
+# for kable() tables to work with kableExtra
+library(knitr)
+
+# for fomratting kable() tables from knitr package
+library(kableExtra)
+
+# for table formatting and table formatting functions
+library(formattable)
+
+```
+
+```{r}
+# load data
+dis <- read_csv("02_raw_data/Disability.csv")
+
+# recode date to age range, this is to fix an excel formatting problem
+dis <- dis %>% 
+  mutate(age_group = recode(age_group, '12-Jun' = "6-12"))
+```
+
+
+```{r}
+# create a table from the data
+# make table of median expenditure for sub-group
+tab <- dis %>% 
+  select(-c(age, gender)) %>% 
+  filter(ethnicity %in% c("Asian", "Black", "Hispanic", "White")) %>%   # keep only large sample groups
+  mutate(age_group = fct_recode(age_group, '0-17' = "0-5", '0-17' = "6-12", '0-17' = "13-17")) %>%    # Combine groups to make this work better
+  group_by(ethnicity, age_group) %>% 
+  summarize_all(list(median)) %>% 
+  mutate_if(is.numeric, round, 0) %>%   # round off the median expenditures 
+  spread(age_group, expenditures) %>%   # spead the table so age_group is column headers
+  as.data.frame()
+
+# view table
+tab
+```
+
+```{r}
+# most basic formattable
+formattable(tab)
+
+# number formatting over an area
+formattable(tab, align = c("1", rep("r", 4)),
+            list(area(col = 2:5) ~ currency))
+
+# gradient color
+formattable(tab, align = c("1", rep("c", ncol(tab) - 1)),
+            list(area(col = 2:ncol(tab)) ~ color_tile("lightblue", "pink")))
+```
+
+
+## Tables II
+
+```{r}
+# use kable table
+kab_tab <- kable(tab,
+                 caption = "Median expenditure for large sample ethnicities",
+                 format.args = list(big.mark = ","),
+                 align = c("1", rep("c", 4)))
+
+kab_tab
+
+# add kable_styling to table
+kab_tab %>% 
+  kable_styling(bootstrap_options = "striped")
+
+# more kableExtra functions table
+kab_E_tab <- kab_tab %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered"),
+                full_width = "none") %>% 
+  add_header_above(c(" ", "Group 1[note]" = 2, "Group 2" = 2)) %>% 
+  add_footnote(c("0-17 is 3 combined age groups"))
+
+kab_E_tab
+
+# more kableExtra functions table
+kab_E_tab %>% 
+  column_spec(3:4, bold = TRUE) %>% 
+  row_spec(3:4, bold = TRUE, color = "white", 
+           background = "lightgreen")
+
+# never angle labels!!!
+
+# group columns to organize the data
+kable(tab, format.args = list(big.mark = ",")) %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>% 
+  add_header_above(c(" ", "Group 1" = 1, "Group 2" = 3)) %>% 
+  add_header_above(c("Group 3" = 1, "Group 4" = 1, "Group 5" = 3)) %>% 
+  add_header_above(c(" ", "Group 6" = 4))
+
+# group rows
+kable(tab, format.args = list(big.mark = ",")) %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered"),
+                full_width = F) %>% 
+  pack_rows("Group 1", 2, 4, label_row_css = "background-color: pink; color: white;")
+
+# group rows to organize the data
+kable(tab, format.args = list(big.mark = ","),
+  caption = "Median expenditures vary most by age") %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered"),
+                full_width = FALSE) %>% 
+  pack_rows("Group 1", 1, 2) %>% 
+  pack_rows("Group 2", 3, 4)
+
+# group columns to organize the data
+kable(tab, format.args = list(big.mark = ",")) %>% 
+  kable_styling(c("striped", "bordered")) %>% 
+  add_header_above(c(" ", "Group 1" = 1, "Group 2" = 3)) %>% 
+  add_header_above(c("Group 3" = 1, "Group 4" = 1, "Group 5" = 3)) %>% 
+  add_header_above(c(" ", "Group 6" = 4)) %>% 
+  pack_rows("Group 7", 1, 2) %>% 
+  pack_rows("Group 8", 3, 4)
+  
+```
+
++ Conditional logic
+
+```{r}
+# add formatting by changing the cell content to include html code for formatting
+tab %>% 
+  mutate("0-17" = prettyNum(
+    cell_spec("0-17", "html", color = ifelse("0-17" > 3000, "red", "blue")),
+    big.mark=","), 
+    "18-21" = prettyNum(
+      cell_spec("18-21", "html", color = "white", align = "c",
+                background = ifelse("18-21" > 10000, "red", "blue")),
+      big.mark=",")) %>% 
+  select(ethnicity, "0-17", "18-21") %>% 
+  kable(escape = FALSE) %>% 
+  kable_styling("striped", full_width = FALSE) %>% 
+  column_spec(1:3, width = "3cm")
+
+# add tool tips
+tab %>% 
+  mutate('51 +' = cell_spec('51 +', tooltip = paste0("ethnicity: ", ethnicity))) %>% 
+  kable("html", escape = FALSE,
+        align = c("1", rep("c", 4))) %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = FALSE)
+```
+```{r}
+# create a table with many customizations - colors!
+tab %>% 
+  mutate("0-17" = color_bar("lightgreen")("0-17"),    # from formattable package
+        "18-21" = color_tile("lightblue", "pink")(currency("18-21", digits = 0)),
+        "22-50" = prettyNum(
+          ifelse("22-50" > 41000,    # the ifelse command controls color of background
+                 cell_spec(paste0("$", "22-50"),
+                 background = "red", color = "white", bold = TRUE),
+          cell_spec("22-50", background = "blue", color = "white")),
+        big.mark=","),
+        "51 +" = prettyNum(cell_spec(paste0("$", "51 +"),
+                             background = "pink",
+                             tooltip = paste0("Ethnicity: ", ethnicity)),   # Added tooltip
+                   big.mark=",")) %>% 
+  select(ethnicity, everything()) %>% 
+  kable(escape = F) %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered", "hover"),
+                full_width = FALSE) %>% 
+  column_spec(2:5, width = "3cm") %>% 
+  add_header_above(c(" ", "21 and Under" = 2, "22 and Older" = 2))
+```
+
+
+
+
+
+
+
+
 
 
 
