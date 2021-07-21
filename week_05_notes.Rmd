@@ -397,7 +397,7 @@ oj <- oj %>%
          act_pr_MM = PriceMM - DiscMM,
          pr_diff = act_pr_MM - act_pr_CH)
 
-# add column of how many sales depening on discounts for each, both, and neither
+# add column of how many sales depending on discounts for each, both, and neither
 oj <- oj %>% 
   mutate(Disc = as.factor(
     ifelse(DiscCH == 0 & DiscMM != 0, "Disc_MM",

@@ -1,0 +1,160 @@
+---
+title: "PA5"
+author: "Andrew Nalundasan"
+date: "7/21/2021"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include=FALSE}
+# load libraries
+library(tidyverse)
+library(scales)
+library(janitor)
+
+```
+
+
+```{r, include=FALSE}
+# Load and prepare data 
+zillow <- read_csv("../02_raw_data/qp1_data.csv")
+```
+
+# Steps: 
+
+1. statistically test the main two findings you presented in your analysis
+
+2. state whether each finding is:
+
+    - practically significant
+    - statistically significant
+
+3. write a technical sentence describing the statistical outcome for each finding
+
+4. write a non-technical sentence describing the statistical outcome for each finding 
+       
+    - make sure it is appropriate for a non-technical audience
+
+5. copy and paste the results and sentences into the assignment page on Canvas
+
+# Main finding 1: the King County housing market is flooded by grade 7, grade 8, and grade 9 houses
+
+```{r}
+# proportion of counts
+zillow %>% 
+  filter(yr_renovated > 1975) %>% 
+  mutate(grade = as.factor(grade)) %>%
+  ggplot(mapping = aes(x = yr_renovated, fill = grade)) + 
+  geom_bar(position = "fill") + 
+  labs(x = "Year Renovated", 
+       y = "Proportion", 
+       title = "Proportion or grade rating with year renovated")
+
+
+
+```
+
+```{r}
+# t-test of grade on year renovated
+# create new object to filter yr_renovated to be everything post 1975
+post_1975 <- zillow %>% 
+  filter(yr_renovated > 1975)
+
+# t-test
+(t <- t.test(post_1975$yr_renovated, post_1975$grade, conf.level = 0.95))
+```
+
+**Comments** 
+
++ Ho: grade of home is the same for each year
+
++ Practical Significance:
+
+    - mean grade of home is 7.83, so housing market has home grades > 7
+    
++ Statistical Significance:
+
+    - p-value is really small, so this is consistent
+    
++ Technical sentence:
+
+    - We reject the null that home grade is the same from year to year
+
++ Non-technical sentence:
+
+    - Grade of home changes from year to year
+
+# Main finding 2: bathrooms and grade greatly impact housing prices
+
+```{r}
+# price relationship differences
+
+bath <-  c("1", "1.5", "2", "2.5", "3", "3.5", "4")
+bath <- as.factor(bath)
+
+zillow %>% 
+  filter(price < 4000000) %>% 
+  filter(bathrooms %in% bath) %>% 
+  mutate(bathrooms = as.factor(bathrooms)) %>% 
+  ggplot(mapping = aes(x = grade, y = price)) +
+  geom_point(position = "jitter") +
+  scale_y_continuous(labels = dollar) + 
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)) + 
+  geom_smooth(mapping = aes(color = bathrooms), method = "lm", se = FALSE) + 
+  labs(x = "Grade", 
+       y = "Price", 
+       title = "Home pricing trends with respect to Grades and Bathrooms")
+```
+
+```{r}
+# Number of obs helps us determine if stats will be valid
+bath <-  c("1", "1.5", "2", "2.5", "3", "3.5", "4")
+bath <- as.factor(bath)
+
+zillow_bath <- zillow %>% 
+  filter(bathrooms %in% bath)
+
+zillow_bath %>% 
+  tabyl(grade, bathrooms)
+```
+
+**Comments**
+
++ Grades 7, 8, and 9 have highest counts of all bathroom categories
+
++ H0: Home grades are the same by number of bathrooms
+
+```{r}
+# Using chi-square tests for counts we can only determine if they are the same or not
+# Are grades similar by number of bathrooms?
+# Not tidyverse so have to use base code
+
+chisq.test(table(zillow_bath$grade, zillow_bath$bathrooms))
+```
+**Comments**
+
++ Practical Significance:
+
+    - Is this practically significant?
+    
++ Statistical Significance:
+
+    - chi-square: large, so reject the null
+    - p-value: small, so reject the null
+    
++ Technical sentence:
+
+    - We reject the null hypothesis that home grades are the same regardless of number of bathrooms a home has. 
+
++ Non-technical sentence:
+
+    - Home grades differ depending on the number of bathrooms that a home has.
