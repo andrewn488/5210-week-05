@@ -1,5 +1,5 @@
 ---
-title: "PA4"
+title: "PA #4: Graph Revision"
 author: "Andrew Nalundasan"
 date: "7/21/2021"
 output: 
@@ -7,7 +7,7 @@ output:
     toc: true
     toc_depth: 3
     toc_float: true
-    number_sections: true
+    number_sections: false
 ---
 
 ```{r setup, include=FALSE}
@@ -15,13 +15,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-# Course: OMSBA 5210
+# Course: OMSBA 5210, Seattle University
 # Purpose: Participation Assignment 4
 # Date: July 21, 2021
 # Author: Andrew Nalundasan
 ```
 
-```{r}
+```{r, include=FALSE}
 # The tidyverse package contains ggplot2, dplyr, and several other packages
 library(tidyverse)
 
@@ -36,7 +36,7 @@ library(ggannotate)
 ```
 
 
-```{r}
+```{r, include=FALSE}
 # Load and prepare data 
 zillow <- read_csv("../02_raw_data/qp1_data.csv")
 
@@ -46,7 +46,16 @@ vtable(zillow)
 ```
 
 
-# Visualizations
+# Revised Visualization
+
+Revision of waterfront scatterplot (3rd graph out of 4 in assignment)
+
++ Changed color of waterfront to blue since blue is associated with water
++ Set transparency to 0.35 to see overlapping data points
++ Removed tick marks to reduce clutter
++ Removed border to reduce clutter
++ Changed y axis to show price in millions and removed trailing 0's
++ Reworded title and subtitle
 
 ```{r}
 cb_palette <- c("#999999", "#00A5FF")
@@ -73,7 +82,7 @@ p <- zillow %>%
   
   labs(x = "Living Space (in Square Feet)",
        y = "Median Price",
-       title = "Waterfront property boosts median home price", 
+       title = "Waterfront property boosts home price", 
        subtitle = "More living space paired with waterfront views\ncompound value of home") + 
   
   geom_text(data = data.frame(x = 7840.10833134011, y = 4134345.8884987, label = "Waterfront"),
@@ -90,5 +99,8 @@ p
 
 # make annotations
 # ggannotate(p)
+
+# save the viz
+ggsave(filename = "PA4.png", plot = p)
 ```
 
